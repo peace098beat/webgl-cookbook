@@ -1,32 +1,24 @@
 var canvas;
 var gl;
 
-// buffers
 var cubeVerticesBuffer;
+var cubeVerticesTextureCoordBuffer;
 var cubeVerticesIndexBuffer;
-var cubeVerticesColorBuffer;
-// state
-var squareRotation = 0.0;
-var squareXOffset = 0.0;
-var squareYOffset = 0.0;
-var squareZOffset = 0.0;
-var lastSquareUpdateTime = 0;
-var xIncValue = 0.2;
-var yIncValue = -0.4;
-var zIncValue = 0.3;
+var cubeRotation = 0.0;
+var lastCubeUpdateTime = 0;
 
+var cubeImage;
+var cubeTexture;
 
-// default
+var mvMatrix;
 var shaderProgram;
 var vertexPositionAttribute;
-var vertexColorAttribute;
+var textureCoordAttribute;
 var perspectiveMatrix;
+
 
 //
 // start
-//
-// Called when the canvas is created to get the ball rolling.
-// Figuratively, that is. There's nothing moving in this demo.
 //
 function start() {
 	canvas = document.getElementById("glcanvas");
@@ -51,17 +43,19 @@ function start() {
 
 		initBuffers();
 
+		// Next, load and set up the textures we'll be using.
+
+		initTextures();
+
 		// Set up to draw the scene periodically.
 
 		setInterval(drawScene, 15);
 	}
 }
 
+
 //
 // initWebGL
-//
-// Initialize WebGL, returning the GL context or null if
-// WebGL isn't available or could not be initialized.
 //
 function initWebGL() {
 	gl = null;
@@ -78,185 +72,7 @@ function initWebGL() {
 }
 
 //
-// initBuffers
-//
-// Initialize the buffers we'll need. For this demo, we just have
-// one object -- a simple two-dimensional square.
-//
-function initBuffers() {
-
-
-
-	// Now create an array of vertices for the square. Note that the Z
-	// coordinate is always 0 here.
-
-	var vertices = [
-		// 前面
-		-1.0, -1.0, 1.0,
-		1.0, -1.0, 1.0,
-		1.0, 1.0, 1.0, -1.0, 1.0, 1.0,
-
-		// 背面
-		-1.0, -1.0, -1.0, -1.0, 1.0, -1.0,
-		1.0, 1.0, -1.0,
-		1.0, -1.0, -1.0,
-
-		// 上面
-		-1.0, 1.0, -1.0, -1.0, 1.0, 1.0,
-		1.0, 1.0, 1.0,
-		1.0, 1.0, -1.0,
-
-		// 底面
-		-1.0, -1.0, -1.0,
-		1.0, -1.0, -1.0,
-		1.0, -1.0, 1.0, -1.0, -1.0, 1.0,
-
-		// 右側面
-		1.0, -1.0, -1.0,
-		1.0, 1.0, -1.0,
-		1.0, 1.0, 1.0,
-		1.0, -1.0, 1.0,
-
-		// 左側面
-		-1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0
-	];
-
-	cubeVerticesBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-
-
-
-	// Now set up the colors for the vertices.
-
-	var colors = [
-		[1.0, 1.0, 1.0, 1.0], // 前面: 白
-		[1.0, 0.0, 0.0, 1.0], // 背面: 赤
-		[0.0, 1.0, 0.0, 1.0], // 上面: 緑
-		[0.0, 0.0, 1.0, 1.0], // 底面: 青
-		[1.0, 1.0, 0.0, 1.0], // 左側面: 黄
-		[1.0, 0.0, 1.0, 1.0] // 左側面: 紫
-	];
-	// Convert the array of colors into a table for all the vertices.
-
-	var generatedColors = [];
-
-	for (j = 0; j < 6; j++) {
-		var c = colors[j];
-
-		for (var i = 0; i < 4; i++) {
-			generatedColors = generatedColors.concat(c);
-		}
-	}
-	cubeVerticesColorBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesColorBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(generatedColors), gl.STATIC_DRAW);
-
-
-
-	// This array defines each face as two triangles, using the
-	// indices into the vertex array to specify each triangle's
-	// position.
-
-	var cubeVertexIndices = [
-		// 前面
-		0, 1, 2, 0, 2, 3,
-		4, 5, 6, 4, 6, 7, // 背面
-		8, 9, 10, 8, 10, 11, // 上面
-		12, 13, 14, 12, 14, 15, // 底面
-		16, 17, 18, 16, 18, 19, // 右側面
-		20, 21, 22, 20, 22, 23 // 左側面
-	];
-
-	// Create a buffer for the square's vertices.
-
-	cubeVerticesIndexBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVerticesIndexBuffer);
-
-	// エレメントの配列をGLに渡す
-	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeVertexIndices), gl.STATIC_DRAW);
-}
-
-//
-// drawScene
-//
-// Draw the scene.
-//
-function drawScene() {
-	// Clear the canvas before we start drawing on it.
-
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	// gl.viewport(0,0,canvas.width, canvas.height);
-
-	// Establish the perspective with which we want to view the
-	// scene. Our field of view is 45 degrees, with a width/height
-	// ratio of 640:480, and we only want to see objects between 0.1 units
-	// and 100 units away from the camera.
-
-	perspectiveMatrix = makePerspective(45, 640.0 / 480.0, 0.1, 100.0);
-
-	// Set the drawing position to the "identity" point, which is
-	// the center of the scene.
-
-	loadIdentity();
-
-	// Now move the drawing position a bit to where we want to start
-	// drawing the square.
-
-	mvTranslate([-0.0, 0.0, -6.0]);
-
-	// Save the current matrix, then rotate before we draw.
-
-	mvPushMatrix();
-
-	mvRotate(squareRotation, [1, 0, 1]);
-	mvTranslate([squareXOffset, squareYOffset, squareZOffset]);
-
-	// Draw the square by binding the array buffer to the square's vertices
-	// array, setting attributes, and pushing it to GL.
-
-	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesBuffer);
-	gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
-
-	// Set the colors attribute for the vertices.
-	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesColorBuffer);
-	gl.vertexAttribPointer(vertexColorAttribute, 4, gl.FLOAT, false, 0, 0);
-
-	// Draw the cube
-
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVerticesIndexBuffer);
-	setMatrixUniforms();
-	gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
-
-	// Restore the oriinal matrix
-
-	mvPopMatrix();
-
-	// Update the ratation for the next draw, if it's tie to do so.
-
-	var currentTime = (new Date).getTime();
-	if (lastSquareUpdateTime) {
-		var delta = currentTime - lastSquareUpdateTime;
-
-		squareRotation += (30 * delta) / 1000.0;
-		squareXOffset += xIncValue * ((30 * delta) / 1000.0);
-		squareYOffset += yIncValue * ((30 * delta) / 1000.0);
-		squareZOffset += zIncValue * ((30 * delta) / 1000.0);
-
-		if (Math.abs(squareYOffset) > 2.5) {
-			xIncValue = -xIncValue;
-			yIncValue = -yIncValue;
-			zIncValue = -zIncValue;
-		}
-	}
-	lastSquareUpdateTime = currentTime;
-
-}
-
-//
 // initShaders
-//
-// Initialize the shaders, so WebGL knows how to light our scene.
 //
 function initShaders() {
 	var fragmentShader = getShader(gl, "shader-fs");
@@ -280,17 +96,11 @@ function initShaders() {
 	vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
 	gl.enableVertexAttribArray(vertexPositionAttribute);
 
-	vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
-	gl.enableVertexAttribArray(vertexColorAttribute);
+	textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
+	gl.enableVertexAttribArray(textureCoordAttribute);
 
 }
-
-//
-// getShader
-//
-// Loads a shader program by scouring the current document,
-// looking for a script with the specified ID.
-//
+// getShader (sub)
 function getShader(gl, id) {
 	var shaderScript = document.getElementById(id);
 
@@ -346,8 +156,220 @@ function getShader(gl, id) {
 }
 
 //
+// initBuffers
+//
+function initBuffers() {
+
+	cubeVerticesBuffer = gl.createBuffer();
+
+	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesBuffer);
+
+	var vertices = [
+		// 前面
+		-1.0, -1.0, 1.0,
+		1.0, -1.0, 1.0,
+		1.0, 1.0, 1.0, -1.0, 1.0, 1.0,
+
+		// 背面
+		-1.0, -1.0, -1.0, -1.0, 1.0, -1.0,
+		1.0, 1.0, -1.0,
+		1.0, -1.0, -1.0,
+
+		// 上面
+		-1.0, 1.0, -1.0, -1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, -1.0,
+
+		// 底面
+		-1.0, -1.0, -1.0,
+		1.0, -1.0, -1.0,
+		1.0, -1.0, 1.0, -1.0, -1.0, 1.0,
+
+		// 右側面
+		1.0, -1.0, -1.0,
+		1.0, 1.0, -1.0,
+		1.0, 1.0, 1.0,
+		1.0, -1.0, 1.0,
+
+		// 左側面
+		-1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0
+	];
+
+
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+
+
+	// Now set up the colors for the vertices.
+
+	cubeVerticesTextureCoordBuffer = gl.createBuffer();
+	// init
+	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesTextureCoordBuffer);
+
+	var textureCoordinates = [
+		// Front
+		0.0, 0.0,
+		1.0, 0.0,
+		1.0, 1.0,
+		0.0, 1.0,
+		// Back
+		0.0, 0.0,
+		1.0, 0.0,
+		1.0, 1.0,
+		0.0, 1.0,
+		// Top
+		0.0, 0.0,
+		1.0, 0.0,
+		1.0, 1.0,
+		0.0, 1.0,
+		// Bottom
+		0.0, 0.0,
+		1.0, 0.0,
+		1.0, 1.0,
+		0.0, 1.0,
+		// Right
+		0.0, 0.0,
+		1.0, 0.0,
+		1.0, 1.0,
+		0.0, 1.0,
+		// Left
+		0.0, 0.0,
+		1.0, 0.0,
+		1.0, 1.0,
+		0.0, 1.0
+	];
+
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
+
+
+	// This array defines each face as two triangles, using the
+	// indices into the vertex array to specify each triangle's
+	// position.
+
+	// Create a buffer for the square's vertices.
+
+	cubeVerticesIndexBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVerticesIndexBuffer);
+
+	var cubeVertexIndices = [
+		// 前面
+		0, 1, 2, 0, 2, 3,
+		4, 5, 6, 4, 6, 7, // 背面
+		8, 9, 10, 8, 10, 11, // 上面
+		12, 13, 14, 12, 14, 15, // 底面
+		16, 17, 18, 16, 18, 19, // 右側面
+		20, 21, 22, 20, 22, 23 // 左側面
+	];
+
+	// エレメントの配列をGLに渡す
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeVertexIndices), gl.STATIC_DRAW);
+}
+
+
+
+// 
+// initTextures
+// 
+
+function initTextures() {
+	cubeTexture = gl.createTexture();
+	cubeImage = new Image();
+	cubeImage.onload = function() {
+		handleTextureLoaded(cubeImage, cubeTexture);
+	}
+	cubeImage.src = "resource/cubetexture.png";
+}
+// handleTextureLoaded (sub)
+function handleTextureLoaded(image, texture) {
+	console.log("handleTextureLoaded, image = " + image);
+	gl.bindTexture(gl.TEXTURE_2D, texture);
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA,
+		gl.UNSIGNED_BYTE, image);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+	gl.generateMipmap(gl.TEXTURE_2D);
+	gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+//
+// drawScene
+//
+function drawScene() {
+	// Clear the canvas before we start drawing on it.
+
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	// gl.viewport(0,0,canvas.width, canvas.height);
+
+	// Establish the perspective with which we want to view the
+	// scene. Our field of view is 45 degrees, with a width/height
+	// ratio of 640:480, and we only want to see objects between 0.1 units
+	// and 100 units away from the camera.
+
+	perspectiveMatrix = makePerspective(45, 640.0 / 480.0, 0.1, 100.0);
+
+	// Set the drawing position to the "identity" point, which is
+	// the center of the scene.
+
+	loadIdentity();
+
+	// Now move the drawing position a bit to where we want to start
+	// drawing the square.
+
+	mvTranslate([-0.0, 0.0, -6.0]);
+
+	// Save the current matrix, then rotate before we draw.
+
+	mvPushMatrix();
+
+	mvRotate(cubeRotation, [1, 0, 1]);
+
+	// Draw the square by binding the array buffer to the square's vertices
+	// array, setting attributes, and pushing it to GL.
+
+	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesBuffer); // update
+	gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+
+	// Set the texture coordinate attribute for the vertices.
+
+	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesTextureCoordBuffer);
+	gl.vertexAttribPointer(textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
+
+	// Specify the texture to map onto the faces.
+
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, cubeTexture);
+	gl.uniform1i(gl.getUniformLocation(shaderProgram, "uSampler"), 0);
+
+	// Draw the cube
+
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVerticesIndexBuffer);
+	setMatrixUniforms();
+	gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
+
+	// Restore the oriinal matrix
+
+	mvPopMatrix();
+
+	// Update the ratation for the next draw, if it's tie to do so.
+
+	var currentTime = (new Date).getTime();
+	if (lastCubeUpdateTime) {
+		var delta = currentTime - lastCubeUpdateTime;
+
+		cubeRotation += (30 * delta) / 1000.0;
+
+	}
+	lastCubeUpdateTime = currentTime;
+
+}
+
+
+
+// ********************************************** //
+//
 // Matrix utility functions
 //
+// ********************************************** //
 var mvMatrix;
 
 function loadIdentity() {

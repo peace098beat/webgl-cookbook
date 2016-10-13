@@ -9,35 +9,35 @@
     <script src="lib/glUtils.js" type="text/javascript"></script>
     <script src="webgl-demo.js" type="text/javascript"></script>
 
-    <!-- Fragment shader Program -->
-    
+
+    <!-- Fragment shader program -->
+
     <script id="shader-fs" type="x-shader/x-fragment">
-        varying lowp vec4 vColor;
+      varying highp vec2 vTextureCoord;
 
-        void main(void){
-            gl_FragColor = vColor;
-        }
+      uniform sampler2D uSampler;
 
+      void main(void) {
+        gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+      }
     </script>
 
     <!-- Vertex shader program -->
-    
+
     <script id="shader-vs" type="x-shader/x-vertex">
-        attribute vec3 aVertexPosition;
-        attribute vec4 aVertexColor;
+      attribute vec3 aVertexPosition;
+      attribute vec2 aTextureCoord;
 
-        uniform mat4 uMVMatrix;
-        uniform mat4 uPMatrix;
+      uniform mat4 uMVMatrix;
+      uniform mat4 uPMatrix;
 
-        varying lowp vec4 vColor;
+      varying highp vec2 vTextureCoord;
 
-        void main(void){
-            gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
-            vColor = aVertexColor;
-        }
-        
+      void main(void) {
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+        vTextureCoord = aTextureCoord;
+      }
     </script>
-
 
 
 </head>
