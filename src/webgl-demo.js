@@ -1,10 +1,11 @@
 var canvas;
 var gl;
-var squareVerticesBuffer;
 var mvMatrix;
-var shaderProgram;
-var vertexPositionAttribute;
 var perspectiveMatrix;
+var shaderProgram;
+var squareVerticesBuffer;
+var vertexPositionAttribute;
+var vertexColorAttribute;
 
 //
 // start
@@ -91,6 +92,19 @@ function initBuffers() {
 	// then use it to fill the current vertex buffer.
 
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+	// Now set up the colors for the vertices.
+
+	var colors = [
+		1.0, 1.0, 1.0, 1.0, // white
+		1.0, 0.0, 0.0, 1.0, // red
+		0.0, 1.0, 0.0, 1.0, // green
+		0.0, 0.0, 1.0, 1.0 // blue
+	];
+
+	squareVerticesColorBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesColorBuffer);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
 }
 
 //
@@ -102,6 +116,7 @@ function drawScene() {
 	// Clear the canvas before we start drawing on it.
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	// gl.viewport(0,0,canvas.width, canvas.height);
 
 	// Establish the perspective with which we want to view the
 	// scene. Our field of view is 45 degrees, with a width/height
@@ -125,8 +140,17 @@ function drawScene() {
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesBuffer);
 	gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+
+	// Set the colors attribute for the vertices.
+	gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesColorBuffer);
+	gl.vertexAttribPointer(vertexColorAttribute, 4, gl.FLOAT, false, 0, 0);
+
+
+	// Draw the square.
+
 	setMatrixUniforms();
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
 }
 
 //
@@ -155,6 +179,10 @@ function initShaders() {
 
 	vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
 	gl.enableVertexAttribArray(vertexPositionAttribute);
+
+	vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+	gl.enableVertexAttribArray(vertexColorAttribute);
+
 }
 
 //
