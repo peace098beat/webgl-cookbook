@@ -14,6 +14,7 @@ var mvMatrix;
 var shaderProgram;
 var vertexPositionAttribute;
 var textureCoordAttribute;
+var vertexNormalAttribute;
 var perspectiveMatrix;
 
 
@@ -98,6 +99,9 @@ function initShaders() {
 
 	textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
 	gl.enableVertexAttribArray(textureCoordAttribute);
+
+	vertexNormalAttribute = gl.getAttribLocation(shaderProgram, "aVertexNormal");
+	gl.enableVertexAttribArray(vertexNormalAttribute);
 
 }
 // getShader (sub)
@@ -194,9 +198,50 @@ function initBuffers() {
 		// 左側面
 		-1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0
 	];
-
-
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+	// Set up the normals for the vertices, so that we can comput lighting
+
+	cubeVerticesNormalBuffer = gl.createBuffer()
+	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesNormalBuffer);
+
+	var vertexNormals = [
+		// Front
+		0.0, 0.0, 1.0,
+		0.0, 0.0, 1.0,
+		0.0, 0.0, 1.0,
+		0.0, 0.0, 1.0,
+
+		// Back
+		0.0, 0.0, -1.0,
+		0.0, 0.0, -1.0,
+		0.0, 0.0, -1.0,
+		0.0, 0.0, -1.0,
+
+		// Top
+		0.0, 1.0, 0.0,
+		0.0, 1.0, 0.0,
+		0.0, 1.0, 0.0,
+		0.0, 1.0, 0.0,
+
+		// Bottom
+		0.0, -1.0, 0.0,
+		0.0, -1.0, 0.0,
+		0.0, -1.0, 0.0,
+		0.0, -1.0, 0.0,
+
+		// Right
+		1.0, 0.0, 0.0,
+		1.0, 0.0, 0.0,
+		1.0, 0.0, 0.0,
+		1.0, 0.0, 0.0,
+
+		// Left
+		-1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0
+	];
+
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexNormals),
+		gl.STATIC_DRAW);
 
 
 
@@ -333,6 +378,11 @@ function drawScene() {
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesTextureCoordBuffer);
 	gl.vertexAttribPointer(textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
+
+	// Bind the normals buffer to the shader attribute.
+
+	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesNormalBuffer);
+	gl.vertexAttribPointer(vertexNormalAttribute, 3, gl.FLOAT, false, 0, 0);
 
 	// Specify the texture to map onto the faces.
 
